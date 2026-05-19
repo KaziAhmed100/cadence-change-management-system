@@ -1,0 +1,50 @@
+# Cadence — local development stack
+#
+# Brings up the supporting services (Postgres, Redis) needed for local dev.
+# The backend and frontend are run on the host directly during development
+# so hot-reload, debuggers, and editor integrations all work normally.
+#
+# Usage:
+#   docker compose up -d           # start all services
+#   docker compose ps              # check status
+#   docker compose logs -f postgres
+#   docker compose down            # stop services (data persists in volumes)
+#   docker compose down -v         # stop and wipe data (fresh start)
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: cadence-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-cadence}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cadence}
+      POSTGRES_DB: ${POSTGRES_DB:-cadence}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infra/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-cadence}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: cadence-redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres_data:
+  redis_data:
