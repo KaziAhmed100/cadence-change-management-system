@@ -1,0 +1,31 @@
+name: CI
+
+# Run on every push to main and every PR targeting main.
+# Path filters let us skip work when only docs/infra changed.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancel superseded runs for the same PR to save CI minutes
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Sanity check that runs on every PR. Real backend/frontend jobs are added
+  # in their respective phases (Phase 2 for backend, Phase 8 for frontend).
+  sanity:
+    name: Sanity check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Show changed files
+        run: |
+          echo "Repo is initialized. Build jobs land in later phases:"
+          echo " - Phase 2: backend lint + type-check + tests"
+          echo " - Phase 8: frontend lint + type-check + tests"
+          echo " - Phase 10: end-to-end test job"
