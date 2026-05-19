@@ -1,0 +1,105 @@
+# ---- OS ----
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# ---- Editors / IDEs ----
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# ---- Environment files ----
+# Never commit real secrets. .env.example files ARE committed.
+.env
+.env.local
+.env.*.local
+*.env
+!.env.example
+
+# ---- Python (backend) ----
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# Testing & coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+.hypothesis/
+
+# Type checkers
+.mypy_cache/
+.pyright/
+.pytype/
+.ruff_cache/
+
+# ---- Node / Next.js (frontend) ----
+node_modules/
+.pnpm-store/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Next.js build output
+.next/
+out/
+next-env.d.ts
+
+# Build artifacts
+build/
+dist/
+
+# ---- Testing (frontend) ----
+coverage/
+.nyc_output/
+playwright-report/
+test-results/
+playwright/.cache/
+
+# ---- Docker ----
+# Volumes are mounted locally; ignore their data dirs if exposed
+.docker-data/
+docker-volumes/
+
+# ---- Logs ----
+logs/
+*.log
+
+# ---- Misc ----
+.cache/
+tmp/
+temp/
