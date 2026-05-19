@@ -1,0 +1,86 @@
+[project]
+name = "cadence-backend"
+version = "0.1.0"
+description = "Cadence — IT change management system. Backend service."
+authors = [{ name = "Kazi Niaz Ahmed" }]
+requires-python = ">=3.11"
+readme = "README.md"
+license = { text = "MIT" }
+
+# We use requirements.txt files as the source of truth for dependencies
+# so this project block stays metadata-only. Tooling config lives below.
+
+# -----------------------------------------------------------------------------
+# Ruff — fast linter. Replaces flake8, isort, pyupgrade, and friends.
+# -----------------------------------------------------------------------------
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = ["alembic/versions"]
+
+[tool.ruff.lint]
+# E/W: pycodestyle, F: pyflakes, I: isort, B: bugbear, UP: pyupgrade,
+# SIM: simplifications, RUF: ruff-specific rules
+select = ["E", "W", "F", "I", "B", "UP", "SIM", "RUF"]
+ignore = [
+    "E501",  # line length - handled by formatter, occasional long strings are fine
+    "B008",  # function call in default arg - FastAPI's Depends() pattern relies on this
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["B011"]  # asserts in tests are the whole point
+
+# -----------------------------------------------------------------------------
+# Black — formatter. We let ruff do everything else.
+# -----------------------------------------------------------------------------
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+
+# -----------------------------------------------------------------------------
+# Mypy — static type checker. Strict-ish; we'll tighten as the codebase grows.
+# -----------------------------------------------------------------------------
+[tool.mypy]
+python_version = "3.11"
+strict_optional = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_return_any = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+# Third-party libs without stubs - silence rather than fail the build
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+
+# -----------------------------------------------------------------------------
+# Pytest
+# -----------------------------------------------------------------------------
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+asyncio_mode = "auto"
+addopts = [
+    "-ra",                # show summary for all non-passing tests
+    "--strict-markers",   # fail on unknown @pytest.mark
+    "--strict-config",
+    "--tb=short",
+]
+
+[tool.coverage.run]
+branch = true
+source = ["app"]
+omit = ["*/tests/*", "*/alembic/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+]

@@ -1,0 +1,15 @@
+# Cadence backend - runtime dependencies
+# Pinned to specific versions so CI builds stay reproducible.
+# Add new packages here as features land; do not auto-upgrade in unrelated PRs.
+
+# Web framework
+fastapi==0.115.0
+uvicorn[standard]==0.32.0
+
+# Validation & settings
+pydantic==2.9.2
+pydantic-settings==2.5.2
+email-validator==2.2.0
+
+# Env loading for local dev
+python-dotenv==1.0.1
