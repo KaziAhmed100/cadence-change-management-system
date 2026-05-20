@@ -76,6 +76,11 @@ def test_engine():
     with engine.connect() as conn:
         conn.execute(text('CREATE EXTENSION IF NOT EXISTS "pgcrypto"'))
         conn.execute(text('CREATE EXTENSION IF NOT EXISTS "citext"'))
+        # Sequences live outside Base.metadata so create_all() doesn't make them.
+        # Recreate them explicitly here. If any new sequences are added later,
+        # they must also be added here.
+        conn.execute(text("DROP SEQUENCE IF EXISTS change_request_seq CASCADE"))
+        conn.execute(text("CREATE SEQUENCE change_request_seq START WITH 1000"))
         conn.commit()
 
     # Drop + recreate the schema so each test session starts clean
