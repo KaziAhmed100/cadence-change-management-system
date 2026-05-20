@@ -79,4 +79,53 @@ We'll hand-roll it instead. Reasons:
 
 ---
 
-## (More to come as we build)
+## 2026-05 — Sync SQLAlchemy over async
+
+We're using SQLAlchemy 2.0 in sync mode (psycopg2 driver) rather than async (asyncpg). Reasons:
+
+- **Debugging**: stack traces are dramatically easier to read. Async stack traces in Python get split across event-loop boundaries; figuring out where a query was issued from is real work.
+- **Library compatibility**: most testing helpers, fixture patterns, and SQLAlchemy ecosystem tooling assume sync. Going async means writing more glue and hitting more rough edges.
+- **No real concurrency need**: this is a portfolio backend. We're not handling thousands of concurrent connections. FastAPI's threadpool handles sync code in endpoints fine.
+
+**Trade-off**: at very high request volume async would scale further. Not a constraint we'll hit.
+
+---
+
+## 2026-05 — Coarse role-based access control for MVP
+
+The MVP uses four roles (Admin, Change Manager, Approver, Requester) checked at the endpoint level via a single `require_role()` dependency. We're not doing permission-level RBAC.
+
+**Why**: for the demo, coarse roles are sufficient and dramatically simpler. Granular permissions would require a `Permission` table, a `RolePermission` join, permission seeding, and per-endpoint permission strings.
+
+**Future-proofing**: every endpoint that needs RBAC goes through `require_role()` rather than ad-hoc `if user.role == ...` checks. Adding `require_permission()` later is a one-line change per endpoint, and the dependency factory pattern means existing endpoints don't break.
+
+---
+
+## 2026-05 — No refresh tokens in MVP
+
+Access tokens only, with an 8-hour TTL. No refresh token mechanism for the MVP.
+
+**Why**: refresh tokens add a second token type, server-side storage for revocation, refresh endpoints, and frontend logic to handle silent refresh. For a demo where the longest realistic session is "recruiter clicks around for 10 minutes," it's overhead with no payoff.
+
+**Trade-off**: in a real production system you'd want shorter access tokens (15min) and refresh tokens (7 days, server-side, revocable). The `auth_service.login()` function is structured so adding refresh later is internal to that module - endpoint contracts don't change.
+
+---
+
+## 2026-05 — Role stored as String + CheckConstraint, not Postgres ENUM
+
+The `users.role` column is `VARCHAR(32)` with a CHECK constraint enforcing the allowed values, not Postgres's native ENUM type.
+
+**Why**: Postgres ENUMs are painful to modify via Alembic. Adding or renaming a value requires a multi-step migration (`ALTER TYPE ... ADD VALUE`, sometimes with explicit transaction handling). With a string + CHECK constraint, adding a new role is a one-line migration that updates the constraint.
+
+**Trade-off**: slightly less type safety at the DB level. Mitigated by the Python `Role` enum at the application layer.
+
+---
+
+## 2026-05 — Tests run against real Postgres, not SQLite
+
+The test suite (`backend/tests/`) connects to a real Postgres instance (`cadence_test` database) rather than the more common SQLite-in-memory pattern.
+
+**Why**: we use Postgres-specific features (`gen_random_uuid()`, `citext`, JSONB later in Phase 3+, interval-overlap queries in Phase 5). SQLite would silently produce different results for these.
+
+**Trade-off**: tests are slower than SQLite would be (~3s vs ~0.5s for the Phase 2 suite) and require Postgres running locally. Worth it for production parity.
+

@@ -1,31 +1,86 @@
 name: CI
 
-# Run on every push to main and every PR targeting main.
-# Path filters let us skip work when only docs/infra changed.
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
 
-# Cancel superseded runs for the same PR to save CI minutes
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  # Sanity check that runs on every PR. Real backend/frontend jobs are added
-  # in their respective phases (Phase 2 for backend, Phase 8 for frontend).
-  sanity:
-    name: Sanity check
+  backend:
+    name: Backend (lint + type-check + test)
     runs-on: ubuntu-latest
+
+    # Spin up Postgres and Redis as service containers - this is the GH Actions
+    # equivalent of our local docker-compose. Tests connect via localhost.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: cadence
+          POSTGRES_PASSWORD: cadence
+          POSTGRES_DB: cadence_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U cadence"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    defaults:
+      run:
+        working-directory: ./backend
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Show changed files
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: backend/requirements*.txt
+
+      - name: Install dependencies
         run: |
-          echo "Repo is initialized. Build jobs land in later phases:"
-          echo " - Phase 2: backend lint + type-check + tests"
-          echo " - Phase 8: frontend lint + type-check + tests"
-          echo " - Phase 10: end-to-end test job"
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: Install Postgres extensions in test DB
+        run: |
+          PGPASSWORD=cadence psql -h localhost -U cadence -d cadence_test \
+            -c 'CREATE EXTENSION IF NOT EXISTS "pgcrypto"' \
+            -c 'CREATE EXTENSION IF NOT EXISTS "citext"'
+
+      - name: Lint (ruff)
+        run: ruff check .
+
+      - name: Format check (black)
+        run: black --check .
+
+      - name: Type check (mypy)
+        run: mypy app
+
+      - name: Run tests
+        env:
+          DATABASE_URL: postgresql+psycopg2://cadence:cadence@localhost:5432/cadence_test
+          REDIS_URL: redis://localhost:6379/0
+          JWT_SECRET: ci-only-secret-not-used-elsewhere-aaaaaaaaaaaaaaaa
+          ENVIRONMENT: test
+        run: pytest --cov=app --cov-report=term-missing
